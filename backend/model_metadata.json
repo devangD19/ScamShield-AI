@@ -1,0 +1,31 @@
+{
+  "model_name": "ScamShield TF-IDF + Logistic Regression Group-Split Model",
+  "target_column": "fraudulent",
+  "label_mapping": {
+    "0": "Dataset label: not fraudulent",
+    "1": "Dataset label: fraudulent"
+  },
+  "text_columns": [
+    "title",
+    "description",
+    "company_profile",
+    "requirements",
+    "benefits",
+    "location",
+    "industry",
+    "function",
+    "employment_type",
+    "required_experience",
+    "required_education",
+    "salary_range"
+  ],
+  "decision_threshold": 0.55,
+  "vectorizer_features": 150000,
+  "test_metrics": {
+    "accuracy": 0.9843,
+    "fraud_precision": 0.8478,
+    "fraud_recall": 0.8478,
+    "fraud_f1": 0.8478
+  },
+  "caveat": "Historical dataset model; validate independently before production deployment."
+}

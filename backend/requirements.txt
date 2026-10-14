@@ -1,0 +1,13 @@
+flask==3.0.3
+flask-cors==5.0.0
+flask-sqlalchemy==3.1.1
+sqlalchemy==2.0.36
+# Postgres driver (used when DATABASE_URL points at Postgres; SQLite needs nothing extra).
+psycopg[binary]==3.2.3
+# Production web server (Linux only; locally `python backend/app.py` is used instead).
+gunicorn==23.0.0; sys_platform != "win32"
+joblib==1.4.2
+# Must match the version the model was saved with (see _sklearn_version in the joblib file).
+scikit-learn==1.6.1
+numpy>=1.26,<2.3
+scipy>=1.11

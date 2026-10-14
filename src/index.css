@@ -1,0 +1,115 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-canvas text-ink antialiased;
+    font-family: theme('fontFamily.sans');
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Visible keyboard focus everywhere */
+  :focus-visible {
+    outline: 2px solid #155b46;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: #d8e5d0;
+    color: #104735;
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .card {
+    @apply rounded-2xl border border-line bg-surface shadow-card;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-white hover:bg-primary-hover;
+  }
+
+  .btn-outline {
+    @apply btn border border-primary/35 bg-surface text-primary hover:border-primary hover:bg-sage;
+  }
+
+  .btn-ghost {
+    @apply btn text-ink hover:bg-sage;
+  }
+
+  .btn-danger {
+    @apply btn bg-risk-high text-white hover:bg-red-700;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted/70 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-ink;
+  }
+
+  .eyebrow {
+    @apply inline-flex items-center gap-2 rounded-full border border-primary/15 bg-sage px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary;
+  }
+
+  .section-title {
+    @apply text-2xl font-bold tracking-tight text-ink sm:text-3xl;
+  }
+
+  .muted {
+    @apply text-muted;
+  }
+
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-white;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
