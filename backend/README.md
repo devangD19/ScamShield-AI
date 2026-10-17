@@ -17,8 +17,9 @@ Full request/response reference: [docs/API_CONTRACT.md](../docs/API_CONTRACT.md)
 | File | Contents |
 | --- | --- |
 | `scamshield_tfidf_logreg.joblib` | Trained LogisticRegression (classes `0` = not fraudulent, `1` = fraudulent) |
-| `scamshield_tfidf_vectorizer.joblib` | Fitted TF-IDF vectorizer from the same training run (150,000 features, 1-2 word n-grams) |
-| `model_metadata.json` | Threshold (0.55), training text columns, documented feature count |
+| `scamshield_tfidf_vectorizer.joblib` | Fitted TF-IDF vectorizer from the same training run (250,000 features, 1-2 word n-grams) |
+| `model_metadata.json` | Threshold (`target_decision_threshold_flask`, 0.55), training text columns, documented feature count |
+| `reference_predictions.json` | Colab probabilities for 8 postings, used only to check the backend reproduces them |
 
 If a file is missing or broken the server still starts, `/api/health` reports
 `"ready": false` with the reason, and `/api/predict` answers `503`.
@@ -63,6 +64,7 @@ curl.exe http://127.0.0.1:8000/api/health
 | `SCAMSHIELD_ARTIFACTS_DIR` | `backend/` | |
 | `SCAMSHIELD_MODEL_FILE` | `scamshield_tfidf_logreg.joblib` | |
 | `SCAMSHIELD_VECTORIZER_FILE` | `scamshield_tfidf_vectorizer.joblib` | |
+| `SCAMSHIELD_THRESHOLD` | from `model_metadata.json` (0.55) | Overrides the decision threshold (between 0 and 1) |
 
 Tables are created automatically on startup.
 
@@ -77,8 +79,8 @@ Tables are created automatically on startup.
 
 `build_model_text()` in `app.py` joins the metadata's `text_columns` with
 single spaces (missing columns → `""`); the vectorizer itself lowercases and
-tokenises. This is consistent with the vectorizer's vocabulary (no `nan`
-token, no column-name prefixes), but the exact column order used in training
-could not be verified from the artifacts.
+tokenises. Verified against `reference_predictions.json`: this format reproduces
+all 8 Colab probabilities (to the file's 6 decimals), while column-name prefixes
+or a different column order do not.
 
 Predictions are estimates from a model trained on historical postings, not proof of fraud.

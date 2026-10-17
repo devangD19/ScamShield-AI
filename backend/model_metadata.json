@@ -19,13 +19,17 @@
     "required_education",
     "salary_range"
   ],
-  "decision_threshold": 0.55,
-  "vectorizer_features": 150000,
-  "test_metrics": {
-    "accuracy": 0.9843,
-    "fraud_precision": 0.8478,
-    "fraud_recall": 0.8478,
-    "fraud_f1": 0.8478
+  "vectorizer_features": 250000,
+  "decision_threshold_for_reported_metrics": 0.5,
+  "target_decision_threshold_flask": 0.55,
+  "reported_test_metrics": {
+    "accuracy": 0.9857,
+    "fraud_precision": 0.84,
+    "fraud_recall": 0.82,
+    "fraud_f1": 0.83,
+    "roc_auc": 0.9884,
+    "average_precision": 0.8874
   },
-  "caveat": "Historical dataset model; validate independently before production deployment."
+  "scikit_learn_version": "1.6.1",
+  "caveat": "Trained on historical dataset; validate independently for live services."
 }

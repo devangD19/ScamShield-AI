@@ -23,6 +23,7 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 
+import analysis as rule_checks
 import auth
 import records
 from database import Analysis, db
@@ -85,13 +86,28 @@ def load_artifacts():
     try:
         with open(METADATA_PATH, encoding="utf-8") as fh:
             state.metadata = json.load(fh)
-        state.threshold = float(state.metadata.get("decision_threshold", DEFAULT_THRESHOLD))
+        # The operational threshold for the API. Not "decision_threshold_for_reported_metrics",
+        # which is only the threshold the evaluation metrics were computed at.
+        for key in ("target_decision_threshold_flask", "decision_threshold"):
+            if key in state.metadata:
+                state.threshold = float(state.metadata[key])
+                break
         if state.metadata.get("text_columns"):
             state.text_columns = list(state.metadata["text_columns"])
     except FileNotFoundError:
         log.warning("Metadata not found at %s; using threshold %.2f", METADATA_PATH, DEFAULT_THRESHOLD)
     except (OSError, ValueError, TypeError) as exc:
         state.errors.append(f"Could not read model metadata: {exc}")
+
+    # Optional override without editing the metadata file.
+    override = os.environ.get("SCAMSHIELD_THRESHOLD", "").strip()
+    if override:
+        try:
+            state.threshold = float(override)
+        except ValueError:
+            state.errors.append(f"SCAMSHIELD_THRESHOLD must be a number, got {override!r}")
+    if not 0 < state.threshold < 1:
+        state.errors.append(f"Decision threshold must be between 0 and 1, got {state.threshold}")
 
     # Classifier.
     try:
@@ -320,6 +336,13 @@ def create_app(state=None, config=None):
             "disclaimer": DISCLAIMER,
             "saved": False,
         }
+
+        # Rule-based text checks (separate from the model; they never change the probability).
+        try:
+            result.update(rule_checks.analyze_posting(
+                fields, record_fields.get("recruiter_email", ""), is_fraudulent))
+        except Exception:
+            log.exception("Rule-based checks failed; returning the model result only")
 
         if user is not None:
             analysis = Analysis(

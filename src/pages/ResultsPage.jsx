@@ -39,12 +39,20 @@ function readSignals(value) {
           item.detail ??
           item.impact ??
           '';
-        return { label: String(label || ''), detail: String(detail || '') };
+        const severity = SEVERITY_STYLES[item.severity] ? item.severity : null;
+        return { label: String(label || ''), detail: String(detail || ''), severity };
       }
       return { label: '', detail: '' };
     })
     .filter((item) => item.label);
 }
+
+// Rule-based signal severity (from the backend's text checks, not the ML model).
+const SEVERITY_STYLES = {
+  high: { label: 'High', dot: 'bg-risk-high', text: 'text-risk-high' },
+  medium: { label: 'Medium', dot: 'bg-risk-medium', text: 'text-risk-medium' },
+  low: { label: 'Low', dot: 'bg-muted', text: 'text-muted' },
+};
 
 function readChecklist(value) {
   const items = Array.isArray(value) ? value : [];
@@ -111,6 +119,9 @@ export default function ResultsPage() {
       analysis.next_steps ??
       analysis.recommendations
   );
+  // An empty list means the checks ran and found nothing; a missing field means they did not run.
+  const signalsChecked = Array.isArray(analysis.warning_signals);
+  const phrasesChecked = Array.isArray(analysis.suspicious_phrases);
 
   const submittedTitle = analysis.job_title ?? analysis.submitted?.job_title ?? null;
   const submittedCompany = analysis.company_name ?? analysis.submitted?.company_name ?? null;
@@ -269,30 +280,44 @@ export default function ResultsPage() {
             <MessageSquareWarning size={17} className="text-risk-medium" aria-hidden="true" />
             Warning Signals
           </h2>
+          <p className="mt-2 text-xs text-muted">
+            Rule-based checks for common scam patterns in your text. They are separate from the
+            model&apos;s fraud probability above.
+          </p>
 
           {signals.length > 0 ? (
             <ul className="mt-4 space-y-3">
-              {signals.map((signal, index) => (
-                <li
-                  key={`${signal.label}-${index}`}
-                  className="rounded-xl border border-line bg-canvas/70 p-4"
-                >
-                  <p className="flex items-start gap-2 text-sm font-medium text-ink">
-                    <span
-                      className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${level.dot}`}
-                      aria-hidden="true"
-                    />
-                    {signal.label}
-                  </p>
-                  {signal.detail && (
-                    <p className="mt-1 pl-4 text-xs leading-relaxed text-muted">{signal.detail}</p>
-                  )}
-                </li>
-              ))}
+              {signals.map((signal, index) => {
+                const severity = SEVERITY_STYLES[signal.severity];
+                return (
+                  <li
+                    key={`${signal.label}-${index}`}
+                    className="rounded-xl border border-line bg-canvas/70 p-4"
+                  >
+                    <p className="flex items-start gap-2 text-sm font-medium text-ink">
+                      <span
+                        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${severity ? severity.dot : level.dot}`}
+                        aria-hidden="true"
+                      />
+                      <span className="flex-1">{signal.label}</span>
+                      {severity && (
+                        <span className={`text-[11px] font-semibold uppercase tracking-wider ${severity.text}`}>
+                          {severity.label}
+                        </span>
+                      )}
+                    </p>
+                    {signal.detail && (
+                      <p className="mt-1 pl-4 text-xs leading-relaxed text-muted">{signal.detail}</p>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <p className="mt-4 rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
-              The backend did not return any warning signals for this analysis.
+              {signalsChecked
+                ? 'No obvious warning signals detected in the provided text. This does not guarantee the job is legitimate.'
+                : 'The backend did not return any warning signals for this analysis.'}
             </p>
           )}
         </section>
@@ -306,7 +331,8 @@ export default function ResultsPage() {
           {phrases.length > 0 ? (
             <>
               <p className="mt-2 text-xs text-muted">
-                Phrases flagged by the model inside the text you submitted.
+                Exact text from your submission that matched a rule-based check (not chosen by the
+                ML model).
               </p>
               <ul className="mt-4 flex flex-wrap gap-2.5">
                 {phrases.map((phrase, index) => (
@@ -321,7 +347,9 @@ export default function ResultsPage() {
             </>
           ) : (
             <p className="mt-4 rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
-              No suspicious phrases were provided in this response.
+              {phrasesChecked
+                ? 'None of the text you submitted matched a known scam phrase.'
+                : 'No suspicious phrases were provided in this response.'}
             </p>
           )}
         </section>

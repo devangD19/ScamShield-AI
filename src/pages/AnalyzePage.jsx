@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
+  ChevronDown,
   Eraser,
   Loader2,
   Send,
@@ -29,12 +30,56 @@ const SOURCES = [
   'Other',
 ];
 
+// Option values match the labels used in the model's training data.
+const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract', 'Temporary', 'Other'];
+const EXPERIENCE_LEVELS = [
+  'Internship',
+  'Entry level',
+  'Associate',
+  'Mid-Senior level',
+  'Director',
+  'Executive',
+  'Not Applicable',
+];
+const EDUCATION_LEVELS = [
+  'High School or equivalent',
+  'Some High School Coursework',
+  'Some College Coursework Completed',
+  'Vocational',
+  'Vocational - HS Diploma',
+  'Vocational - Degree',
+  'Certification',
+  'Associate Degree',
+  "Bachelor's Degree",
+  "Master's Degree",
+  'Doctorate',
+  'Professional',
+  'Unspecified',
+];
+
+const DETAIL_MAX_LENGTH = 5000;
+
+// Optional details the model was trained on. Keys must match OPTIONAL_MODEL_FIELDS.
+const DETAIL_FIELDS = [
+  { name: 'companyProfile', label: 'Company profile', multiline: true, placeholder: 'What the posting says about the company' },
+  { name: 'requirements', label: 'Requirements', multiline: true, placeholder: 'Skills, qualifications or documents asked for' },
+  { name: 'benefits', label: 'Benefits', multiline: true, placeholder: 'Perks, stipend details, certificates…' },
+  { name: 'location', label: 'Location', placeholder: 'e.g. Pune, India or Remote' },
+  { name: 'salaryRange', label: 'Salary range', placeholder: 'e.g. 25000-30000 per month' },
+  { name: 'industry', label: 'Industry', placeholder: 'e.g. Information Technology' },
+  { name: 'jobFunction', label: 'Function', placeholder: 'e.g. Engineering, Sales' },
+  { name: 'employmentType', label: 'Employment type', options: EMPLOYMENT_TYPES },
+  { name: 'requiredExperience', label: 'Required experience', options: EXPERIENCE_LEVELS },
+  { name: 'requiredEducation', label: 'Required education', options: EDUCATION_LEVELS },
+];
+
 const INITIAL_FORM = {
   jobTitle: '',
   companyName: '',
   recruiterEmail: '',
   source: 'LinkedIn',
   description: '',
+  ...Object.fromEntries(DETAIL_FIELDS.map((field) => [field.name, ''])),
 };
 
 export default function AnalyzePage() {
@@ -47,10 +92,12 @@ export default function AnalyzePage() {
   const [submitError, setSubmitError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [activeExample, setActiveExample] = useState(null);
+  const [showDetails, setShowDetails] = useState(false);
   const errorRef = useRef(null);
 
   const descriptionLength = form.description.length;
   const nearLimit = descriptionLength > MAX_LENGTH * 0.9;
+  const filledDetails = DETAIL_FIELDS.filter((field) => form[field.name].trim()).length;
 
   const setField = (name, value) => {
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -78,6 +125,14 @@ export default function AnalyzePage() {
     if (descriptionLength > MAX_LENGTH) {
       next.description = `Description must be ${MAX_LENGTH.toLocaleString()} characters or fewer.`;
     }
+
+    for (const field of DETAIL_FIELDS) {
+      if (form[field.name].length > DETAIL_MAX_LENGTH) {
+        next[field.name] = `${field.label} must be ${DETAIL_MAX_LENGTH.toLocaleString()} characters or fewer.`;
+      }
+    }
+    // Make sure an invalid optional field is visible so it can be focused.
+    if (DETAIL_FIELDS.some((field) => next[field.name])) setShowDetails(true);
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -117,7 +172,9 @@ export default function AnalyzePage() {
 
   const applyExample = (example) => {
     // Populates the form only — no prediction is generated until submit.
+    // Starting from INITIAL_FORM clears any optional details left from before.
     setForm({
+      ...INITIAL_FORM,
       jobTitle: example.jobTitle,
       companyName: example.companyName,
       recruiterEmail: example.recruiterEmail,
@@ -301,6 +358,84 @@ export default function AnalyzePage() {
                   <AlertTriangle size={13} aria-hidden="true" /> You are close to the character
                   limit.
                 </p>
+              )}
+            </div>
+
+            {/* Optional details — the model was trained on these fields too */}
+            <div className="rounded-xl border border-line bg-canvas/60">
+              <button
+                type="button"
+                onClick={() => setShowDetails((open) => !open)}
+                aria-expanded={showDetails}
+                aria-controls="optional-details"
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+              >
+                <span>
+                  <span className="block text-sm font-medium text-ink">
+                    More details{' '}
+                    <span className="text-xs font-normal text-muted">(optional)</span>
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    {filledDetails > 0
+                      ? `${filledDetails} of ${DETAIL_FIELDS.length} added`
+                      : 'Copy any extra sections from the posting — more detail gives the model more to work with.'}
+                  </span>
+                </span>
+                <ChevronDown
+                  size={17}
+                  aria-hidden="true"
+                  className={`shrink-0 text-muted transition-transform motion-reduce:transition-none ${
+                    showDetails ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {showDetails && (
+                <div id="optional-details" className="grid gap-4 border-t border-line px-4 pb-4 pt-4 sm:grid-cols-2">
+                  {DETAIL_FIELDS.map((field) => {
+                    const id = `detail-${field.name}`;
+                    const error = errors[field.name];
+                    const common = {
+                      id,
+                      name: field.name,
+                      value: form[field.name],
+                      onChange: (event) => setField(field.name, event.target.value),
+                      'aria-invalid': Boolean(error),
+                      'aria-describedby': error ? `${id}-error` : undefined,
+                    };
+                    return (
+                      <div key={field.name} className={field.multiline ? 'sm:col-span-2' : undefined}>
+                        <label htmlFor={id} className="label">
+                          {field.label}
+                        </label>
+                        {field.options ? (
+                          <select {...common} className="input">
+                            <option value="">Not specified</option>
+                            {field.options.map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        ) : field.multiline ? (
+                          <textarea
+                            {...common}
+                            rows={3}
+                            className="input resize-y"
+                            placeholder={field.placeholder}
+                          />
+                        ) : (
+                          <input {...common} type="text" className="input" placeholder={field.placeholder} />
+                        )}
+                        {error && (
+                          <p id={`${id}-error`} role="alert" className="mt-1.5 text-xs text-risk-high">
+                            {error}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
 
